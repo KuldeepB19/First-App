@@ -15,106 +15,70 @@ if "basic_last" not in st.session_state:
 if "history" not in st.session_state:
     st.session_state.history = []
 
-# scientific
-if "sci_expr_input" not in st.session_state:
-    st.session_state.sci_expr_input = ""
+if "basic_input" not in st.session_state:
+    st.session_state.basic_input = ""
+
+if "sci_input" not in st.session_state:
+    st.session_state.sci_input = ""
 if "sci_result" not in st.session_state:
     st.session_state.sci_result = ""
 
-if "theme" not in st.session_state:
-    st.session_state.theme = "Dark"
-
-# -------------------- SIDEBAR --------------------
-st.sidebar.title("🧮 Multi Calculator")
-
-theme_choice = st.sidebar.radio(
-    "Theme",
-    ["Dark", "Light"],
-    index=0 if st.session_state.theme == "Dark" else 1,
-)
-st.session_state.theme = theme_choice
-
-with st.sidebar.expander("History", expanded=False):
-    if not st.session_state.history:
-        st.write("No calculations yet.")
-    else:
-        for item in st.session_state.history:
-            st.write(item)
-
-# -------------------- THEME COLORS --------------------
-if st.session_state.theme == "Dark":
-    BG = "#020617"
-    CARD_BG = "#020617"
-    TEXT = "#e5e7eb"
-    SUBTEXT = "#9ca3af"
-    BORDER = "#1f2937"
-    BUTTON_BG = "#111827"
-    BUTTON_TEXT = "#e5e7eb"
-else:
-    BG = "#f3f4f6"
-    CARD_BG = "#ffffff"
-    TEXT = "#111827"
-    SUBTEXT = "#6b7280"
-    BORDER = "#d1d5db"
-    BUTTON_BG = "#e5e7eb"
-    BUTTON_TEXT = "#111827"
-
-# -------------------- LIGHT CSS --------------------
+# -------------------- SIMPLE STYLING --------------------
 st.markdown(
-    f"""
+    """
     <style>
-    .stApp {{
-        background: {BG};
-        color: {TEXT};
+    .stApp {
+        background: #020617;
+        color: #e5e7eb;
         font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-    }}
-    .card {{
-        padding: 1.3rem 1.3rem 1.1rem 1.3rem;
+    }
+    .card {
+        padding: 1.2rem 1.2rem 1rem 1.2rem;
         border-radius: 1rem;
-        background: {CARD_BG};
-        border: 1px solid {BORDER};
+        background: #020617;
+        border: 1px solid #1f2937;
         max-width: 520px;
         margin: 1.8rem auto;
-    }}
-    .title {{
+    }
+    .title {
         text-align: center;
         font-size: 1.5rem;
         font-weight: 600;
         margin-bottom: 0.2rem;
-    }}
-    .subtitle {{
+    }
+    .subtitle {
         text-align: center;
         font-size: 0.85rem;
-        color: {SUBTEXT};
+        color: #9ca3af;
         margin-bottom: 1rem;
-    }}
-    .display-main {{
+    }
+    .display-main {
         width: 100%;
         padding: 0.55rem 0.8rem;
         border-radius: 0.8rem;
-        background: {CARD_BG};
-        border: 1px solid {BORDER};
+        background: #020617;
+        border: 1px solid #374151;
         font-size: 1.4rem;
         text-align: right;
         font-variant-numeric: tabular-nums;
         margin-bottom: 0.2rem;
-        color: {TEXT};
-    }}
-    .display-sub {{
+        color: #e5e7eb;
+    }
+    .display-sub {
         width: 100%;
         font-size: 0.8rem;
         text-align: right;
-        color: {SUBTEXT};
+        color: #9ca3af;
         min-height: 1rem;
         margin-bottom: 0.5rem;
-    }}
-    .section-label {{
+    }
+    .section-label {
         font-weight: 600;
         margin-bottom: 0.3rem;
-    }}
-    .stButton > button {{
-        background: {BUTTON_BG};
-        color: {BUTTON_TEXT};
+    }
+    .stButton > button {
+        background: #111827;
+        color: #e5e7eb;
         border-radius: 0.6rem;
         border: none;
         padding-top: 0.35rem;
@@ -122,13 +86,13 @@ st.markdown(
         font-size: 1.0rem;
         font-weight: 500;
         min-height: 2.2rem;
-    }}
+    }
     </style>
     """,
     unsafe_allow_html=True,
 )
 
-# ---------------- BASIC CALCULATOR ----------------
+# -------------------- BASIC CALCULATOR LOGIC --------------------
 def safe_eval_basic(expr: str) -> str:
     expr = expr.replace("×", "*").replace("÷", "/")
     expr = expr.replace(" ", "")
@@ -192,13 +156,14 @@ def basic_press(key: str):
     st.session_state.basic_expr = exp + key
 
 
-def keyboard_submit():
-    expr = st.session_state.basic_text.strip()
+def basic_keyboard_submit():
+    expr = st.session_state.basic_input.strip()
     allowed = "0123456789.+-*/()% "
     expr = "".join(ch for ch in expr if ch in allowed)
 
     if expr == "":
         st.session_state.basic_expr = "0"
+        st.session_state.basic_last = ""
         return
 
     st.session_state.basic_expr = expr
@@ -208,7 +173,7 @@ def keyboard_submit():
     add_history(expr, result)
 
 
-# ---------------- SCIENTIFIC CALCULATOR ----------------
+# -------------------- SCIENTIFIC CALCULATOR LOGIC --------------------
 allowed_funcs = {
     "sin": math.sin,
     "cos": math.cos,
@@ -235,7 +200,15 @@ def safe_eval_sci(expr: str) -> str:
     return str(val)
 
 
-# ---------------- CURRENCY CONVERTER ----------------
+def sci_append(text: str):
+    st.session_state.sci_input += text
+
+
+def sci_calculate():
+    st.session_state.sci_result = safe_eval_sci(st.session_state.sci_input)
+
+
+# -------------------- CURRENCY CONVERTER --------------------
 RATES = {
     "USD": 1.0,
     "INR": 83.0,
@@ -251,7 +224,7 @@ def convert_currency(amount: float, from_curr: str, to_curr: str) -> float:
     return base * RATES[to_curr]
 
 
-# ---------------- BMI ----------------
+# -------------------- BMI --------------------
 def bmi_category(bmi: float) -> str:
     if bmi < 18.5:
         return "Underweight"
@@ -259,11 +232,12 @@ def bmi_category(bmi: float) -> str:
         return "Normal"
     elif bmi < 30:
         return "Overweight"
+        # else:
     else:
         return "Obese"
 
 
-# ================= MAIN UI =================
+# ================= MAIN UI LAYOUT =================
 st.markdown('<div class="card">', unsafe_allow_html=True)
 st.markdown('<div class="title">Multi Calculator</div>', unsafe_allow_html=True)
 st.markdown(
@@ -277,6 +251,7 @@ tabs = st.tabs(["Basic", "Scientific", "Currency", "BMI"])
 with tabs[0]:
     st.markdown("<div class='section-label'>Basic Calculator</div>", unsafe_allow_html=True)
 
+    # display
     st.markdown(
         f"<div class='display-main'>{st.session_state.basic_expr}</div>",
         unsafe_allow_html=True,
@@ -286,14 +261,16 @@ with tabs[0]:
         unsafe_allow_html=True,
     )
 
+    # keyboard input (separate state key)
     st.text_input(
         "Keyboard input (press Enter to evaluate)",
-        value="" if st.session_state.basic_expr == "0" else st.session_state.basic_expr,
-        key="basic_text",
-        on_change=keyboard_submit,
+        key="basic_input",
+        value=st.session_state.basic_expr if st.session_state.basic_expr != "0" else "",
+        on_change=basic_keyboard_submit,
         max_chars=40,
     )
 
+    # on-screen buttons
     rows = [
         ["C", "⌫", "±", "÷"],
         ["7", "8", "9", "×"],
@@ -314,39 +291,50 @@ with tabs[0]:
                         key = "*"
                     basic_press(key)
 
+    # history under basic
+    st.markdown("**History (Basic):**")
+    if not st.session_state.history:
+        st.caption("No calculations yet.")
+    else:
+        for item in st.session_state.history[:8]:
+            st.caption(item)
+
 # ---------- TAB 2: SCIENTIFIC ----------
 with tabs[1]:
     st.markdown("<div class='section-label'>Scientific Calculator</div>", unsafe_allow_html=True)
     st.caption("Example: sin(pi/2) + log(10), sqrt(16), cos(pi)")
 
-    # Let Streamlit fully control this key (no assignment in same line)
-    sci_text = st.text_input(
+    # text input controlled by sci_input key
+    st.text_input(
         "Expression",
-        value=st.session_state.sci_expr_input,
-        key="sci_expr_input",
+        key="sci_input",
         placeholder="Use sin, cos, tan, log, sqrt, pi, e, ...",
     )
 
-    # Use whatever is in the widget as the current expression
-    expr = st.session_state.sci_expr_input
-
-    # Buttons append to the expression in session_state
+    # function buttons (callbacks modify sci_input in session_state)
     func_cols = st.columns(4)
     sci_buttons = ["sin(", "cos(", "tan(", "sqrt("]
     for i, b in enumerate(sci_buttons):
-        if func_cols[i].button(b, key=f"sci_btn_{b}", use_container_width=True):
-            st.session_state.sci_expr_input = expr + b
-            expr = st.session_state.sci_expr_input
+        func_cols[i].button(
+            b,
+            key=f"sci_btn_{b}",
+            use_container_width=True,
+            on_click=sci_append,
+            args=(b,),
+        )
 
     func_cols2 = st.columns(4)
     more_buttons = ["log(", "log10(", "pi", "e"]
     for i, b in enumerate(more_buttons):
-        if func_cols2[i].button(b, key=f"sci_more_{b}", use_container_width=True):
-            st.session_state.sci_expr_input = expr + b
-            expr = st.session_state.sci_expr_input
+        func_cols2[i].button(
+            b,
+            key=f"sci_more_{b}",
+            use_container_width=True,
+            on_click=sci_append,
+            args=(b,),
+        )
 
-    if st.button("Calculate", key="sci_calc_btn"):
-        st.session_state.sci_result = safe_eval_sci(st.session_state.sci_expr_input)
+    st.button("Calculate", key="sci_calc_btn", on_click=sci_calculate)
 
     if st.session_state.sci_result != "":
         st.markdown("**Result:**")
@@ -392,8 +380,3 @@ with tabs[3]:
             st.markdown(f"**Category:** {bmi_category(bmi)}")
 
 st.markdown("</div>", unsafe_allow_html=True)
-
-st.markdown(
-    f"<p style='text-align:center; font-size:0.75rem; color:{SUBTEXT};'>Built with Streamlit • Theme: {st.session_state.theme}</p>",
-    unsafe_allow_html=True,
-)
