@@ -1,153 +1,103 @@
 import streamlit as st
 import math
-import re
 
 st.set_page_config(
-    page_title="Multi Calculator Hub",
+    page_title="Multi Calculator",
     page_icon="🧮",
     layout="centered",
 )
 
-# ----------------- GLOBAL STYLING (Modern UI) -----------------
+# ---------- Minimal styling (faster, still modern) ----------
 st.markdown(
     """
     <style>
     .stApp {
-        background: radial-gradient(circle at top, #1e293b 0, #020617 45%, #000 100%);
+        background: #0f172a;
         color: #e5e7eb;
         font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
     }
-    .main-card {
-        padding: 2rem 2rem 1.8rem 2rem;
-        border-radius: 1.5rem;
-        background: rgba(15, 23, 42, 0.96);
-        box-shadow: 0 24px 60px rgba(0, 0, 0, 0.7);
-        border: 1px solid rgba(148, 163, 184, 0.25);
-        max-width: 520px;
-        margin: 2.5rem auto;
+    .card {
+        padding: 1.5rem 1.5rem 1.2rem 1.5rem;
+        border-radius: 1.2rem;
+        background: #020617;
+        border: 1px solid #1f2937;
+        max-width: 500px;
+        margin: 2rem auto;
+        box-shadow: 0 18px 40px rgba(0,0,0,0.7);
     }
-    .app-title {
-        font-size: 1.9rem;
-        font-weight: 650;
-        letter-spacing: 0.08em;
+    .title {
         text-align: center;
-        text-transform: uppercase;
-        margin-bottom: 0.4rem;
-    }
-    .app-subtitle {
-        text-align: center;
-        font-size: 0.9rem;
-        color: #9ca3af;
-        margin-bottom: 1.8rem;
-    }
-    .section-title {
-        font-size: 1.1rem;
-        font-weight: 600;
-        margin-bottom: 0.5rem;
-    }
-    .display-box {
-        width: 100%;
-        padding: 0.7rem 1rem;
-        border-radius: 0.9rem;
-        background: linear-gradient(135deg, #020617, #020617, #0f172a);
-        border: 1px solid rgba(148, 163, 184, 0.4);
         font-size: 1.6rem;
-        text-align: right;
-        color: #e5e7eb;
-        box-sizing: border-box;
-        margin-bottom: 0.3rem;
-        font-variant-numeric: tabular-nums;
+        font-weight: 600;
+        margin-bottom: 0.2rem;
     }
-    .display-mini {
+    .subtitle {
+        text-align: center;
+        font-size: 0.85rem;
+        color: #9ca3af;
+        margin-bottom: 1.2rem;
+    }
+    .display-main {
+        width: 100%;
+        padding: 0.65rem 0.9rem;
+        border-radius: 0.9rem;
+        background: #020617;
+        border: 1px solid #374151;
+        font-size: 1.5rem;
+        text-align: right;
+        font-variant-numeric: tabular-nums;
+        margin-bottom: 0.2rem;
+    }
+    .display-sub {
         width: 100%;
         font-size: 0.8rem;
         text-align: right;
         color: #9ca3af;
-        margin-bottom: 1rem;
-        min-height: 1.1rem;
-    }
-    .button-row {
-        display: flex;
-        gap: 0.6rem;
-        margin-bottom: 0.6rem;
-    }
-    .calc-btn {
-        border-radius: 999px !important;
-        height: 3rem;
-        font-size: 1.05rem;
-        font-weight: 500;
-        border: none;
-    }
-    .basic-btn {
-        background: #111827;
-    }
-    .op-btn {
-        background: linear-gradient(135deg, #0ea5e9, #6366f1);
-    }
-    .func-btn {
-        background: #020617;
-        color: #f97316;
-    }
-    .eq-btn {
-        background: linear-gradient(135deg, #22c55e, #16a34a);
-    }
-    .css-1v0mbdj p {  /* hacky: reduce default markdown spacing inside card */
-        margin-bottom: 0.2rem;
+        min-height: 1rem;
+        margin-bottom: 0.8rem;
     }
     </style>
     """,
     unsafe_allow_html=True,
 )
 
-# ----------------- SIDEBAR -----------------
-st.sidebar.title("🧮 Calculator Modes")
-mode = st.sidebar.radio(
-    "Choose calculator type:",
-    ["Basic", "Scientific", "Currency Converter", "BMI Calculator"],
-)
-
-st.sidebar.markdown("---")
-st.sidebar.markdown("**Tip:** Put this repo on GitHub and deploy on Streamlit Cloud 🔥")
-
-
-# ----------------- BASIC CALCULATOR (BUTTON GRID) -----------------
+# ---------- BASIC CALCULATOR STATE ----------
 if "basic_expr" not in st.session_state:
     st.session_state.basic_expr = "0"
 if "basic_last" not in st.session_state:
     st.session_state.basic_last = ""
 
 
-ALLOWED_BASIC = re.compile(r"^[0-9+\-*/().% ]+$")
-
-
 def safe_eval_basic(expr: str) -> str:
     expr = expr.replace("×", "*").replace("÷", "/")
     expr = expr.replace(" ", "")
 
-    if not expr:
-        return "0"
-
-    if not ALLOWED_BASIC.match(expr):
+    allowed_chars = "0123456789.+-*/()%"
+    if any(c not in allowed_chars for c in expr):
         return "Error"
 
+    if not expr:
+        return "0"
     try:
-        value = eval(expr, {"__builtins__": {}}, {})
+        val = eval(expr, {"__builtins__": {}}, {})
     except Exception:
         return "Error"
 
-    if isinstance(value, float) and value.is_integer():
-        return str(int(value))
-    return str(value)
+    if isinstance(val, float) and val.is_integer():
+        return str(int(val))
+    return str(val)
 
 
 def basic_press(key: str):
     exp = st.session_state.basic_expr
 
+    # Clear
     if key == "C":
         st.session_state.basic_expr = "0"
         st.session_state.basic_last = ""
         return
 
+    # Backspace
     if key == "⌫":
         if len(exp) <= 1:
             st.session_state.basic_expr = "0"
@@ -155,19 +105,29 @@ def basic_press(key: str):
             st.session_state.basic_expr = exp[:-1]
         return
 
+    # Toggle sign
+    if key == "±":
+        if exp.startswith("-"):
+            st.session_state.basic_expr = exp[1:]
+        else:
+            if exp != "0":
+                st.session_state.basic_expr = "-" + exp
+        return
+
+    # Evaluate
     if key == "=":
         result = safe_eval_basic(exp)
         st.session_state.basic_last = exp + " ="
         st.session_state.basic_expr = result
         return
 
+    # Append normal key
     if exp == "0" and key not in [".", "%"]:
         exp = ""
-
     st.session_state.basic_expr = exp + key
 
 
-# ----------------- SCIENTIFIC CALCULATOR -----------------
+# ---------- SCIENTIFIC CALC ----------
 if "sci_expr" not in st.session_state:
     st.session_state.sci_expr = ""
 if "sci_result" not in st.session_state:
@@ -183,7 +143,6 @@ allowed_funcs = {
     "pi": math.pi,
     "e": math.e,
     "abs": abs,
-    "pow": pow,
 }
 
 
@@ -195,16 +154,12 @@ def safe_eval_sci(expr: str) -> str:
     except Exception:
         return "Error"
 
-    try:
-        if isinstance(val, float) and val.is_integer():
-            return str(int(val))
-        return str(val)
-    except Exception:
-        return "Error"
+    if isinstance(val, float) and val.is_integer():
+        return str(int(val))
+    return str(val)
 
 
-# ----------------- CURRENCY CONVERTER -----------------
-# simple static rates relative to 1 USD (not live!)
+# ---------- CURRENCY CONVERTER ----------
 RATES = {
     "USD": 1.0,
     "INR": 83.0,
@@ -220,68 +175,56 @@ def convert_currency(amount: float, from_curr: str, to_curr: str) -> float:
     return base * RATES[to_curr]
 
 
-# ----------------- BMI CALCULATOR -----------------
+# ---------- BMI ----------
 def bmi_category(bmi: float) -> str:
     if bmi < 18.5:
         return "Underweight"
     elif bmi < 25:
-        return "Normal weight"
+        return "Normal"
     elif bmi < 30:
         return "Overweight"
     else:
         return "Obese"
 
 
-# ================= MAIN UI CARD =================
-st.markdown('<div class="main-card">', unsafe_allow_html=True)
-st.markdown('<div class="app-title">Multi Calculator</div>', unsafe_allow_html=True)
+# ================= MAIN UI =================
+st.markdown('<div class="card">', unsafe_allow_html=True)
+st.markdown('<div class="title">Multi Calculator</div>', unsafe_allow_html=True)
 st.markdown(
-    '<div class="app-subtitle">Basic • Scientific • Currency • BMI</div>',
+    '<div class="subtitle">Basic • Scientific • Currency • BMI</div>',
     unsafe_allow_html=True,
 )
 
-# ----------------- MODE: BASIC -----------------
-if mode == "Basic":
-    st.markdown('<div class="section-title">Basic Calculator</div>', unsafe_allow_html=True)
+tabs = st.tabs(["Basic", "Scientific", "Currency", "BMI"])
+
+# ---------- TAB 1: BASIC ----------
+with tabs[0]:
+    st.markdown("**Basic Calculator**")
+
+    # Display
     st.markdown(
-        f'<div class="display-box">{st.session_state.basic_expr}</div>',
+        f"<div class='display-main'>{st.session_state.basic_expr}</div>",
         unsafe_allow_html=True,
     )
     st.markdown(
-        f'<div class="display-mini">{st.session_state.basic_last}</div>',
+        f"<div class='display-sub'>{st.session_state.basic_last}</div>",
         unsafe_allow_html=True,
     )
 
+    # Buttons layout
     rows = [
-        ["C", "⌫", "%", "÷"],
+        ["C", "⌫", "±", "÷"],
         ["7", "8", "9", "×"],
         ["4", "5", "6", "-"],
         ["1", "2", "3", "+"],
-        ["0", ".", "=", ""],
+        ["0", ".", "%", "="],
     ]
 
     for i, row in enumerate(rows):
-        cols = st.columns(4, gap="small")
+        cols = st.columns(4)
         for j, label in enumerate(row):
-            if label == "":
-                cols[j].write("")
-                continue
-
-            if label in ["C", "⌫"]:
-                btn_class = "func-btn"
-            elif label in ["÷", "×", "-", "+", "%"]:
-                btn_class = "op-btn"
-            elif label == "=":
-                btn_class = "eq-btn"
-            else:
-                btn_class = "basic-btn"
-
             with cols[j]:
-                if st.button(
-                    label,
-                    key=f"basic_{i}_{j}_{label}",
-                    use_container_width=True,
-                ):
+                if st.button(label, key=f"basic_{i}_{j}_{label}", use_container_width=True):
                     key = label
                     if key == "÷":
                         key = "/"
@@ -289,21 +232,21 @@ if mode == "Basic":
                         key = "*"
                     basic_press(key)
 
-# ----------------- MODE: SCIENTIFIC -----------------
-elif mode == "Scientific":
-    st.markdown('<div class="section-title">Scientific Calculator</div>', unsafe_allow_html=True)
-    st.caption("Use functions: sin(x), cos(x), tan(x), log(x), log10(x), sqrt(x), pi, e, abs(x)")
+# ---------- TAB 2: SCIENTIFIC ----------
+with tabs[1]:
+    st.markdown("**Scientific Calculator**")
+    st.caption("Example: sin(pi/2) + log(10)")
 
     st.session_state.sci_expr = st.text_input(
         "Expression",
         value=st.session_state.sci_expr,
-        placeholder="e.g. sin(pi/2) + log(10)",
+        placeholder="Type expression using sin, cos, tan, log, sqrt, pi, e, ...",
     )
 
     func_cols = st.columns(4)
     sci_buttons = ["sin(", "cos(", "tan(", "sqrt("]
     for i, b in enumerate(sci_buttons):
-        if func_cols[i].button(b, key=f"sci_func_{b}"):
+        if func_cols[i].button(b, key=f"sci_btn_{b}"):
             st.session_state.sci_expr += b
 
     func_cols2 = st.columns(4)
@@ -319,57 +262,48 @@ elif mode == "Scientific":
         st.markdown("**Result:**")
         st.code(str(st.session_state.sci_result))
 
-# ----------------- MODE: CURRENCY CONVERTER -----------------
-elif mode == "Currency Converter":
-    st.markdown('<div class="section-title">Currency Converter</div>', unsafe_allow_html=True)
-    st.caption("Static sample rates – not real-time forex data.")
+# ---------- TAB 3: CURRENCY ----------
+with tabs[2]:
+    st.markdown("**Currency Converter**")
+    st.caption("Static demo rates (not live forex).")
 
     amount = st.number_input("Amount", min_value=0.0, value=100.0, step=1.0)
-    col_from, col_to = st.columns(2)
-    with col_from:
-        from_curr = st.selectbox("From", list(RATES.keys()), index=1)  # default INR
-    with col_to:
-        to_curr = st.selectbox("To", list(RATES.keys()), index=0)  # default USD
+    col1, col2 = st.columns(2)
+    with col1:
+        from_curr = st.selectbox("From", list(RATES.keys()), index=1)  # INR default
+    with col2:
+        to_curr = st.selectbox("To", list(RATES.keys()), index=0)      # USD default
 
-    if st.button("Convert"):
+    if st.button("Convert", key="convert_btn"):
         if from_curr == to_curr:
-            st.info("Both currencies are the same. Result is the same as amount.")
             result = amount
         else:
             result = convert_currency(amount, from_curr, to_curr)
+        st.markdown(f"**{amount:.2f} {from_curr} ≈ {result:.2f} {to_curr}**")
 
-        st.markdown(
-            f"**{amount:.2f} {from_curr} ≈ {result:.2f} {to_curr}**"
-        )
+# ---------- TAB 4: BMI ----------
+with tabs[3]:
+    st.markdown("**BMI Calculator**")
+    st.caption("Body Mass Index (kg/m²)")
 
-# ----------------- MODE: BMI CALCULATOR -----------------
-elif mode == "BMI Calculator":
-    st.markdown('<div class="section-title">BMI Calculator</div>', unsafe_allow_html=True)
-    st.caption("Body Mass Index based on height & weight.")
-
-    col_w, col_h = st.columns(2)
-    with col_w:
+    c1, c2 = st.columns(2)
+    with c1:
         weight = st.number_input("Weight (kg)", min_value=0.0, value=60.0, step=0.5)
-    with col_h:
+    with c2:
         height_cm = st.number_input("Height (cm)", min_value=0.0, value=170.0, step=0.5)
 
-    if st.button("Calculate BMI"):
-        if height_cm <= 0 or weight <= 0:
+    if st.button("Calculate BMI", key="bmi_btn"):
+        if weight <= 0 or height_cm <= 0:
             st.error("Please enter valid height and weight.")
         else:
-            height_m = height_cm / 100.0
-            bmi = weight / (height_m ** 2)
-            category = bmi_category(bmi)
+            h_m = height_cm / 100.0
+            bmi = weight / (h_m ** 2)
             st.markdown(f"**BMI:** {bmi:.1f}")
-            st.markdown(f"**Category:** {category}")
+            st.markdown(f"**Category:** {bmi_category(bmi)}")
 
 st.markdown("</div>", unsafe_allow_html=True)
 
 st.markdown(
-    """
-    <p style='text-align:center; font-size:0.8rem; color:#64748b; margin-top:0.8rem;'>
-    Built with ❤️ using Streamlit
-    </p>
-    """,
+    "<p style='text-align:center; font-size:0.75rem; color:#6b7280;'>Built with Streamlit</p>",
     unsafe_allow_html=True,
 )
