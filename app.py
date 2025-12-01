@@ -7,67 +7,159 @@ st.set_page_config(
     layout="centered",
 )
 
-# ---------- Minimal styling (faster, still modern) ----------
+# -------------------- SESSION STATE --------------------
+if "basic_expr" not in st.session_state:
+    st.session_state.basic_expr = "0"
+if "basic_last" not in st.session_state:
+    st.session_state.basic_last = ""
+if "history" not in st.session_state:
+    st.session_state.history = []
+if "sci_expr" not in st.session_state:
+    st.session_state.sci_expr = ""
+if "sci_result" not in st.session_state:
+    st.session_state.sci_result = ""
+if "theme" not in st.session_state:
+    st.session_state.theme = "Dark"
+
+# -------------------- SIDEBAR --------------------
+st.sidebar.title("🧮 Multi Calculator")
+
+# Theme toggle
+theme_choice = st.sidebar.radio(
+    "Theme",
+    ["Dark", "Light"],
+    index=0 if st.session_state.theme == "Dark" else 1,
+)
+st.session_state.theme = theme_choice
+
+# History in sidebar
+with st.sidebar.expander("History", expanded=False):
+    if not st.session_state.history:
+        st.write("No calculations yet.")
+    else:
+        for item in st.session_state.history:
+            st.write(item)
+
+# -------------------- THEME COLORS --------------------
+if st.session_state.theme == "Dark":
+    BG = "#0f172a"
+    CARD_BG = "#020617"
+    TEXT = "#e5e7eb"
+    SUBTEXT = "#9ca3af"
+    BORDER = "#1f2937"
+    BUTTON_BG = "#111827"
+    BUTTON_TEXT = "#e5e7eb"
+else:  # Light
+    BG = "#f3f4f6"
+    CARD_BG = "#ffffff"
+    TEXT = "#111827"
+    SUBTEXT = "#6b7280"
+    BORDER = "#d1d5db"
+    BUTTON_BG = "#e5e7eb"
+    BUTTON_TEXT = "#111827"
+
+# -------------------- GLOBAL STYLING --------------------
 st.markdown(
-    """
+    f"""
     <style>
-    .stApp {
-        background: #0f172a;
-        color: #e5e7eb;
+    .stApp {{
+        background: {BG};
+        color: {TEXT};
         font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-    }
-    .card {
+    }}
+    .card {{
         padding: 1.5rem 1.5rem 1.2rem 1.5rem;
         border-radius: 1.2rem;
-        background: #020617;
-        border: 1px solid #1f2937;
-        max-width: 500px;
+        background: {CARD_BG};
+        border: 1px solid {BORDER};
+        max-width: 520px;
         margin: 2rem auto;
-        box-shadow: 0 18px 40px rgba(0,0,0,0.7);
-    }
-    .title {
+        box-shadow: 0 18px 40px rgba(0,0,0,0.45);
+    }}
+    .title {{
         text-align: center;
         font-size: 1.6rem;
         font-weight: 600;
         margin-bottom: 0.2rem;
-    }
-    .subtitle {
+    }}
+    .subtitle {{
         text-align: center;
         font-size: 0.85rem;
-        color: #9ca3af;
+        color: {SUBTEXT};
         margin-bottom: 1.2rem;
-    }
-    .display-main {
+    }}
+    .display-main {{
         width: 100%;
         padding: 0.65rem 0.9rem;
         border-radius: 0.9rem;
-        background: #020617;
-        border: 1px solid #374151;
+        background: {CARD_BG};
+        border: 1px solid {BORDER};
         font-size: 1.5rem;
         text-align: right;
         font-variant-numeric: tabular-nums;
         margin-bottom: 0.2rem;
-    }
-    .display-sub {
+        color: {TEXT};
+    }}
+    .display-sub {{
         width: 100%;
         font-size: 0.8rem;
         text-align: right;
-        color: #9ca3af;
+        color: {SUBTEXT};
         min-height: 1rem;
-        margin-bottom: 0.8rem;
-    }
+        margin-bottom: 0.5rem;
+    }}
+    .section-label {{
+        font-weight: 600;
+        margin-bottom: 0.4rem;
+    }}
+    .stButton > button {{
+        background: {BUTTON_BG};
+        color: {BUTTON_TEXT};
+        border-radius: 0.7rem;
+        border: none;
+        padding-top: 0.45rem;
+        padding-bottom: 0.45rem;
+        font-size: 1.05rem;
+        font-weight: 500;
+        transition: all 0.08s ease-out;
+    }}
+    .stButton > button:hover {{
+        transform: translateY(-1px);
+        box-shadow: 0 6px 16px rgba(0,0,0,0.35);
+    }}
+    .stButton > button:active {{
+        transform: translateY(0);
+        box-shadow: none;
+        filter: brightness(0.95);
+    }}
     </style>
     """,
     unsafe_allow_html=True,
 )
 
-# ---------- BASIC CALCULATOR STATE ----------
-if "basic_expr" not in st.session_state:
-    st.session_state.basic_expr = "0"
-if "basic_last" not in st.session_state:
-    st.session_state.basic_last = ""
+# -------- Click sound (simple JS) --------
+st.markdown(
+    """
+    <audio id="click-sound" src="https://actions.google.com/sounds/v1/cartoon/wood_plank_flicks.ogg"></audio>
+    <script>
+    const snd = document.getElementById("click-sound");
+    if (snd) {{
+        window.addEventListener("click", function(e) {{
+            const tag = e.target.tagName;
+            if (tag === "BUTTON") {{
+                try {{
+                    snd.currentTime = 0;
+                    snd.play();
+                }} catch(err) {{}}
+            }}
+        }}, true);
+    }}
+    </script>
+    """,
+    unsafe_allow_html=True,
+)
 
-
+# ---------------- BASIC CALCULATOR LOGIC ----------------
 def safe_eval_basic(expr: str) -> str:
     expr = expr.replace("×", "*").replace("÷", "/")
     expr = expr.replace(" ", "")
@@ -86,6 +178,14 @@ def safe_eval_basic(expr: str) -> str:
     if isinstance(val, float) and val.is_integer():
         return str(int(val))
     return str(val)
+
+
+def add_history(expr: str, result: str):
+    if result == "Error" or expr.strip() == "":
+        return
+    item = f"{expr} = {result}"
+    st.session_state.history.insert(0, item)
+    st.session_state.history = st.session_state.history[:15]
 
 
 def basic_press(key: str):
@@ -119,6 +219,7 @@ def basic_press(key: str):
         result = safe_eval_basic(exp)
         st.session_state.basic_last = exp + " ="
         st.session_state.basic_expr = result
+        add_history(exp, result)
         return
 
     # Append normal key
@@ -127,12 +228,19 @@ def basic_press(key: str):
     st.session_state.basic_expr = exp + key
 
 
-# ---------- SCIENTIFIC CALC ----------
-if "sci_expr" not in st.session_state:
-    st.session_state.sci_expr = ""
-if "sci_result" not in st.session_state:
-    st.session_state.sci_result = ""
+# Keyboard input callback
+def keyboard_submit():
+    expr = st.session_state.basic_text.strip()
+    if expr == "":
+        return
+    st.session_state.basic_expr = expr
+    result = safe_eval_basic(expr)
+    st.session_state.basic_last = expr + " ="
+    st.session_state.basic_expr = result
+    add_history(expr, result)
 
+
+# ---------------- SCIENTIFIC CALCULATOR ----------------
 allowed_funcs = {
     "sin": math.sin,
     "cos": math.cos,
@@ -159,7 +267,7 @@ def safe_eval_sci(expr: str) -> str:
     return str(val)
 
 
-# ---------- CURRENCY CONVERTER ----------
+# ---------------- CURRENCY CONVERTER ----------------
 RATES = {
     "USD": 1.0,
     "INR": 83.0,
@@ -175,7 +283,7 @@ def convert_currency(amount: float, from_curr: str, to_curr: str) -> float:
     return base * RATES[to_curr]
 
 
-# ---------- BMI ----------
+# ---------------- BMI ----------------
 def bmi_category(bmi: float) -> str:
     if bmi < 18.5:
         return "Underweight"
@@ -199,9 +307,9 @@ tabs = st.tabs(["Basic", "Scientific", "Currency", "BMI"])
 
 # ---------- TAB 1: BASIC ----------
 with tabs[0]:
-    st.markdown("**Basic Calculator**")
+    st.markdown("<div class='section-label'>Basic Calculator</div>", unsafe_allow_html=True)
 
-    # Display
+    # Displays
     st.markdown(
         f"<div class='display-main'>{st.session_state.basic_expr}</div>",
         unsafe_allow_html=True,
@@ -211,7 +319,17 @@ with tabs[0]:
         unsafe_allow_html=True,
     )
 
-    # Buttons layout
+    # Keyboard input
+    st.text_input(
+        "Keyboard: type 2+2 and press Enter",
+        value="" if st.session_state.basic_expr == "0" else st.session_state.basic_expr,
+        key="basic_text",
+        on_change=keyboard_submit,
+    )
+
+    st.markdown("")
+
+    # Button grid
     rows = [
         ["C", "⌫", "±", "÷"],
         ["7", "8", "9", "×"],
@@ -234,13 +352,14 @@ with tabs[0]:
 
 # ---------- TAB 2: SCIENTIFIC ----------
 with tabs[1]:
-    st.markdown("**Scientific Calculator**")
-    st.caption("Example: sin(pi/2) + log(10)")
+    st.markdown("<div class='section-label'>Scientific Calculator</div>", unsafe_allow_html=True)
+    st.caption("Examples: sin(pi/2) + log(10), sqrt(16), cos(pi)")
 
     st.session_state.sci_expr = st.text_input(
         "Expression",
         value=st.session_state.sci_expr,
-        placeholder="Type expression using sin, cos, tan, log, sqrt, pi, e, ...",
+        placeholder="Use sin, cos, tan, log, sqrt, pi, e, ...",
+        key="sci_expr_input",
     )
 
     func_cols = st.columns(4)
@@ -255,7 +374,7 @@ with tabs[1]:
         if func_cols2[i].button(b, key=f"sci_more_{b}"):
             st.session_state.sci_expr += b
 
-    if st.button("Calculate", key="sci_calc"):
+    if st.button("Calculate", key="sci_calc_btn"):
         st.session_state.sci_result = safe_eval_sci(st.session_state.sci_expr)
 
     if st.session_state.sci_result != "":
@@ -264,8 +383,8 @@ with tabs[1]:
 
 # ---------- TAB 3: CURRENCY ----------
 with tabs[2]:
-    st.markdown("**Currency Converter**")
-    st.caption("Static demo rates (not live forex).")
+    st.markdown("<div class='section-label'>Currency Converter</div>", unsafe_allow_html=True)
+    st.caption("Static demo rates (not real-time forex).")
 
     amount = st.number_input("Amount", min_value=0.0, value=100.0, step=1.0)
     col1, col2 = st.columns(2)
@@ -283,7 +402,7 @@ with tabs[2]:
 
 # ---------- TAB 4: BMI ----------
 with tabs[3]:
-    st.markdown("**BMI Calculator**")
+    st.markdown("<div class='section-label'>BMI Calculator</div>", unsafe_allow_html=True)
     st.caption("Body Mass Index (kg/m²)")
 
     c1, c2 = st.columns(2)
@@ -304,6 +423,6 @@ with tabs[3]:
 st.markdown("</div>", unsafe_allow_html=True)
 
 st.markdown(
-    "<p style='text-align:center; font-size:0.75rem; color:#6b7280;'>Built with Streamlit</p>",
+    f"<p style='text-align:center; font-size:0.75rem; color:{SUBTEXT};'>Built with Streamlit • Theme: {st.session_state.theme}</p>",
     unsafe_allow_html=True,
 )
