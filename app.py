@@ -24,7 +24,6 @@ if "theme" not in st.session_state:
 # -------------------- SIDEBAR --------------------
 st.sidebar.title("🧮 Multi Calculator")
 
-# Theme toggle
 theme_choice = st.sidebar.radio(
     "Theme",
     ["Dark", "Light"],
@@ -32,7 +31,6 @@ theme_choice = st.sidebar.radio(
 )
 st.session_state.theme = theme_choice
 
-# History in sidebar
 with st.sidebar.expander("History", expanded=False):
     if not st.session_state.history:
         st.write("No calculations yet.")
@@ -42,14 +40,14 @@ with st.sidebar.expander("History", expanded=False):
 
 # -------------------- THEME COLORS --------------------
 if st.session_state.theme == "Dark":
-    BG = "#0f172a"
+    BG = "#020617"
     CARD_BG = "#020617"
     TEXT = "#e5e7eb"
     SUBTEXT = "#9ca3af"
     BORDER = "#1f2937"
     BUTTON_BG = "#111827"
     BUTTON_TEXT = "#e5e7eb"
-else:  # Light
+else:
     BG = "#f3f4f6"
     CARD_BG = "#ffffff"
     TEXT = "#111827"
@@ -58,7 +56,7 @@ else:  # Light
     BUTTON_BG = "#e5e7eb"
     BUTTON_TEXT = "#111827"
 
-# -------------------- GLOBAL STYLING --------------------
+# -------------------- LIGHT CSS (no heavy effects) --------------------
 st.markdown(
     f"""
     <style>
@@ -68,17 +66,16 @@ st.markdown(
         font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
     }}
     .card {{
-        padding: 1.5rem 1.5rem 1.2rem 1.5rem;
-        border-radius: 1.2rem;
+        padding: 1.3rem 1.3rem 1.1rem 1.3rem;
+        border-radius: 1rem;
         background: {CARD_BG};
         border: 1px solid {BORDER};
         max-width: 520px;
-        margin: 2rem auto;
-        box-shadow: 0 18px 40px rgba(0,0,0,0.45);
+        margin: 1.8rem auto;
     }}
     .title {{
         text-align: center;
-        font-size: 1.6rem;
+        font-size: 1.5rem;
         font-weight: 600;
         margin-bottom: 0.2rem;
     }}
@@ -86,15 +83,15 @@ st.markdown(
         text-align: center;
         font-size: 0.85rem;
         color: {SUBTEXT};
-        margin-bottom: 1.2rem;
+        margin-bottom: 1rem;
     }}
     .display-main {{
         width: 100%;
-        padding: 0.65rem 0.9rem;
-        border-radius: 0.9rem;
+        padding: 0.55rem 0.8rem;
+        border-radius: 0.8rem;
         background: {CARD_BG};
         border: 1px solid {BORDER};
-        font-size: 1.5rem;
+        font-size: 1.4rem;
         text-align: right;
         font-variant-numeric: tabular-nums;
         margin-bottom: 0.2rem;
@@ -110,56 +107,25 @@ st.markdown(
     }}
     .section-label {{
         font-weight: 600;
-        margin-bottom: 0.4rem;
+        margin-bottom: 0.3rem;
     }}
     .stButton > button {{
         background: {BUTTON_BG};
         color: {BUTTON_TEXT};
-        border-radius: 0.7rem;
+        border-radius: 0.6rem;
         border: none;
-        padding-top: 0.45rem;
-        padding-bottom: 0.45rem;
-        font-size: 1.05rem;
+        padding-top: 0.35rem;
+        padding-bottom: 0.35rem;
+        font-size: 1.0rem;
         font-weight: 500;
-        transition: all 0.08s ease-out;
-    }}
-    .stButton > button:hover {{
-        transform: translateY(-1px);
-        box-shadow: 0 6px 16px rgba(0,0,0,0.35);
-    }}
-    .stButton > button:active {{
-        transform: translateY(0);
-        box-shadow: none;
-        filter: brightness(0.95);
+        min-height: 2.2rem;
     }}
     </style>
     """,
     unsafe_allow_html=True,
 )
 
-# -------- Click sound (simple JS) --------
-st.markdown(
-    """
-    <audio id="click-sound" src="https://actions.google.com/sounds/v1/cartoon/wood_plank_flicks.ogg"></audio>
-    <script>
-    const snd = document.getElementById("click-sound");
-    if (snd) {{
-        window.addEventListener("click", function(e) {{
-            const tag = e.target.tagName;
-            if (tag === "BUTTON") {{
-                try {{
-                    snd.currentTime = 0;
-                    snd.play();
-                }} catch(err) {{}}
-            }}
-        }}, true);
-    }}
-    </script>
-    """,
-    unsafe_allow_html=True,
-)
-
-# ---------------- BASIC CALCULATOR LOGIC ----------------
+# ---------------- BASIC CALCULATOR ----------------
 def safe_eval_basic(expr: str) -> str:
     expr = expr.replace("×", "*").replace("÷", "/")
     expr = expr.replace(" ", "")
@@ -191,13 +157,11 @@ def add_history(expr: str, result: str):
 def basic_press(key: str):
     exp = st.session_state.basic_expr
 
-    # Clear
     if key == "C":
         st.session_state.basic_expr = "0"
         st.session_state.basic_last = ""
         return
 
-    # Backspace
     if key == "⌫":
         if len(exp) <= 1:
             st.session_state.basic_expr = "0"
@@ -205,7 +169,6 @@ def basic_press(key: str):
             st.session_state.basic_expr = exp[:-1]
         return
 
-    # Toggle sign
     if key == "±":
         if exp.startswith("-"):
             st.session_state.basic_expr = exp[1:]
@@ -214,7 +177,6 @@ def basic_press(key: str):
                 st.session_state.basic_expr = "-" + exp
         return
 
-    # Evaluate
     if key == "=":
         result = safe_eval_basic(exp)
         st.session_state.basic_last = exp + " ="
@@ -222,17 +184,20 @@ def basic_press(key: str):
         add_history(exp, result)
         return
 
-    # Append normal key
     if exp == "0" and key not in [".", "%"]:
         exp = ""
     st.session_state.basic_expr = exp + key
 
 
-# Keyboard input callback
 def keyboard_submit():
     expr = st.session_state.basic_text.strip()
+    allowed = "0123456789.+-*/()% "
+    expr = "".join(ch for ch in expr if ch in allowed)
+
     if expr == "":
+        st.session_state.basic_expr = "0"
         return
+
     st.session_state.basic_expr = expr
     result = safe_eval_basic(expr)
     st.session_state.basic_last = expr + " ="
@@ -245,7 +210,7 @@ allowed_funcs = {
     "sin": math.sin,
     "cos": math.cos,
     "tan": math.tan,
-    "log": math.log,    # natural log
+    "log": math.log,
     "log10": math.log10,
     "sqrt": math.sqrt,
     "pi": math.pi,
@@ -265,6 +230,11 @@ def safe_eval_sci(expr: str) -> str:
     if isinstance(val, float) and val.is_integer():
         return str(int(val))
     return str(val)
+
+
+def sci_submit():
+    expr = st.session_state.sci_expr
+    st.session_state.sci_result = safe_eval_sci(expr)
 
 
 # ---------------- CURRENCY CONVERTER ----------------
@@ -309,7 +279,6 @@ tabs = st.tabs(["Basic", "Scientific", "Currency", "BMI"])
 with tabs[0]:
     st.markdown("<div class='section-label'>Basic Calculator</div>", unsafe_allow_html=True)
 
-    # Displays
     st.markdown(
         f"<div class='display-main'>{st.session_state.basic_expr}</div>",
         unsafe_allow_html=True,
@@ -319,17 +288,14 @@ with tabs[0]:
         unsafe_allow_html=True,
     )
 
-    # Keyboard input
     st.text_input(
-        "Keyboard: type 2+2 and press Enter",
+        "Keyboard input (press Enter to evaluate)",
         value="" if st.session_state.basic_expr == "0" else st.session_state.basic_expr,
         key="basic_text",
         on_change=keyboard_submit,
+        max_chars=40,
     )
 
-    st.markdown("")
-
-    # Button grid
     rows = [
         ["C", "⌫", "±", "÷"],
         ["7", "8", "9", "×"],
@@ -353,29 +319,30 @@ with tabs[0]:
 # ---------- TAB 2: SCIENTIFIC ----------
 with tabs[1]:
     st.markdown("<div class='section-label'>Scientific Calculator</div>", unsafe_allow_html=True)
-    st.caption("Examples: sin(pi/2) + log(10), sqrt(16), cos(pi)")
+    st.caption("Example: sin(pi/2) + log(10), sqrt(16), cos(pi)")
 
-    st.session_state.sci_expr = st.text_input(
+    # Bind text_input directly to session_state.sci_expr so buttons update it
+    st.text_input(
         "Expression",
-        value=st.session_state.sci_expr,
+        key="sci_expr",
         placeholder="Use sin, cos, tan, log, sqrt, pi, e, ...",
-        key="sci_expr_input",
+        on_change=sci_submit,
     )
 
     func_cols = st.columns(4)
     sci_buttons = ["sin(", "cos(", "tan(", "sqrt("]
     for i, b in enumerate(sci_buttons):
-        if func_cols[i].button(b, key=f"sci_btn_{b}"):
+        if func_cols[i].button(b, key=f"sci_btn_{b}", use_container_width=True):
             st.session_state.sci_expr += b
 
     func_cols2 = st.columns(4)
     more_buttons = ["log(", "log10(", "pi", "e"]
     for i, b in enumerate(more_buttons):
-        if func_cols2[i].button(b, key=f"sci_more_{b}"):
+        if func_cols2[i].button(b, key=f"sci_more_{b}", use_container_width=True):
             st.session_state.sci_expr += b
 
     if st.button("Calculate", key="sci_calc_btn"):
-        st.session_state.sci_result = safe_eval_sci(st.session_state.sci_expr)
+        sci_submit()
 
     if st.session_state.sci_result != "":
         st.markdown("**Result:**")
@@ -389,9 +356,9 @@ with tabs[2]:
     amount = st.number_input("Amount", min_value=0.0, value=100.0, step=1.0)
     col1, col2 = st.columns(2)
     with col1:
-        from_curr = st.selectbox("From", list(RATES.keys()), index=1)  # INR default
+        from_curr = st.selectbox("From", list(RATES.keys()), index=1)
     with col2:
-        to_curr = st.selectbox("To", list(RATES.keys()), index=0)      # USD default
+        to_curr = st.selectbox("To", list(RATES.keys()), index=0)
 
     if st.button("Convert", key="convert_btn"):
         if from_curr == to_curr:
