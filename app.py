@@ -15,8 +15,7 @@ if "basic_last" not in st.session_state:
 if "history" not in st.session_state:
     st.session_state.history = []
 
-if "sci_expr" not in st.session_state:
-    st.session_state.sci_expr = ""
+# scientific
 if "sci_expr_input" not in st.session_state:
     st.session_state.sci_expr_input = ""
 if "sci_result" not in st.session_state:
@@ -320,34 +319,34 @@ with tabs[1]:
     st.markdown("<div class='section-label'>Scientific Calculator</div>", unsafe_allow_html=True)
     st.caption("Example: sin(pi/2) + log(10), sqrt(16), cos(pi)")
 
-    # 1) Read current text input into sci_expr_input
-    st.session_state.sci_expr_input = st.text_input(
+    # Let Streamlit fully control this key (no assignment in same line)
+    sci_text = st.text_input(
         "Expression",
         value=st.session_state.sci_expr_input,
         key="sci_expr_input",
         placeholder="Use sin, cos, tan, log, sqrt, pi, e, ...",
     )
 
-    # 2) By default, keep sci_expr in sync with what user typed
-    st.session_state.sci_expr = st.session_state.sci_expr_input
+    # Use whatever is in the widget as the current expression
+    expr = st.session_state.sci_expr_input
 
-    # 3) Buttons append to sci_expr and then sync back to the text field
+    # Buttons append to the expression in session_state
     func_cols = st.columns(4)
     sci_buttons = ["sin(", "cos(", "tan(", "sqrt("]
     for i, b in enumerate(sci_buttons):
         if func_cols[i].button(b, key=f"sci_btn_{b}", use_container_width=True):
-            st.session_state.sci_expr += b
-            st.session_state.sci_expr_input = st.session_state.sci_expr
+            st.session_state.sci_expr_input = expr + b
+            expr = st.session_state.sci_expr_input
 
     func_cols2 = st.columns(4)
     more_buttons = ["log(", "log10(", "pi", "e"]
     for i, b in enumerate(more_buttons):
         if func_cols2[i].button(b, key=f"sci_more_{b}", use_container_width=True):
-            st.session_state.sci_expr += b
-            st.session_state.sci_expr_input = st.session_state.sci_expr
+            st.session_state.sci_expr_input = expr + b
+            expr = st.session_state.sci_expr_input
 
     if st.button("Calculate", key="sci_calc_btn"):
-        st.session_state.sci_result = safe_eval_sci(st.session_state.sci_expr)
+        st.session_state.sci_result = safe_eval_sci(st.session_state.sci_expr_input)
 
     if st.session_state.sci_result != "":
         st.markdown("**Result:**")
