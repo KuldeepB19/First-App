@@ -7,17 +7,21 @@ st.set_page_config(
     layout="centered",
 )
 
-# -------------------- SESSION STATE --------------------
+# -------------------- SESSION STATE SETUP --------------------
 if "basic_expr" not in st.session_state:
     st.session_state.basic_expr = "0"
 if "basic_last" not in st.session_state:
     st.session_state.basic_last = ""
 if "history" not in st.session_state:
     st.session_state.history = []
+
 if "sci_expr" not in st.session_state:
     st.session_state.sci_expr = ""
+if "sci_expr_input" not in st.session_state:
+    st.session_state.sci_expr_input = ""
 if "sci_result" not in st.session_state:
     st.session_state.sci_result = ""
+
 if "theme" not in st.session_state:
     st.session_state.theme = "Dark"
 
@@ -56,7 +60,7 @@ else:
     BUTTON_BG = "#e5e7eb"
     BUTTON_TEXT = "#111827"
 
-# -------------------- LIGHT CSS (no heavy effects) --------------------
+# -------------------- LIGHT CSS --------------------
 st.markdown(
     f"""
     <style>
@@ -232,11 +236,6 @@ def safe_eval_sci(expr: str) -> str:
     return str(val)
 
 
-def sci_submit():
-    expr = st.session_state.sci_expr
-    st.session_state.sci_result = safe_eval_sci(expr)
-
-
 # ---------------- CURRENCY CONVERTER ----------------
 RATES = {
     "USD": 1.0,
@@ -321,28 +320,34 @@ with tabs[1]:
     st.markdown("<div class='section-label'>Scientific Calculator</div>", unsafe_allow_html=True)
     st.caption("Example: sin(pi/2) + log(10), sqrt(16), cos(pi)")
 
-    # Bind text_input directly to session_state.sci_expr so buttons update it
-    st.text_input(
+    # 1) Read current text input into sci_expr_input
+    st.session_state.sci_expr_input = st.text_input(
         "Expression",
-        key="sci_expr",
+        value=st.session_state.sci_expr_input,
+        key="sci_expr_input",
         placeholder="Use sin, cos, tan, log, sqrt, pi, e, ...",
-        on_change=sci_submit,
     )
 
+    # 2) By default, keep sci_expr in sync with what user typed
+    st.session_state.sci_expr = st.session_state.sci_expr_input
+
+    # 3) Buttons append to sci_expr and then sync back to the text field
     func_cols = st.columns(4)
     sci_buttons = ["sin(", "cos(", "tan(", "sqrt("]
     for i, b in enumerate(sci_buttons):
         if func_cols[i].button(b, key=f"sci_btn_{b}", use_container_width=True):
             st.session_state.sci_expr += b
+            st.session_state.sci_expr_input = st.session_state.sci_expr
 
     func_cols2 = st.columns(4)
     more_buttons = ["log(", "log10(", "pi", "e"]
     for i, b in enumerate(more_buttons):
         if func_cols2[i].button(b, key=f"sci_more_{b}", use_container_width=True):
             st.session_state.sci_expr += b
+            st.session_state.sci_expr_input = st.session_state.sci_expr
 
     if st.button("Calculate", key="sci_calc_btn"):
-        sci_submit()
+        st.session_state.sci_result = safe_eval_sci(st.session_state.sci_expr)
 
     if st.session_state.sci_result != "":
         st.markdown("**Result:**")
